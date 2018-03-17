@@ -17,8 +17,8 @@ import ( // for console I/O
 var sobelH = [9]int{-1, 0, 1, -2, 0, 2, -1, 0, 1} // both are applied to the pixels of the image
 var sobelV = [9]int{1, 2, 1, 0, 0, 0, -1, -2, -1}
 
-var movementx = [9]int{-1, -1, -1, -1, 0, 0, 1, 1, 1}
-var movementy = [9]int{-1, 0, 1, 0, 0, 1, -1, 0, 1}
+var movementx = [9]int{-1, 0, 1, -1, 0, 1, -1, 0, 1}
+var movementy = [9]int{-1, -1, -1, 0, 0, 0, 1, 1, 1}
 
 const threads = 4
 
@@ -37,25 +37,25 @@ func sobelWorker(get <-chan [9]Pixel, set chan<- Pixel) {
 		//var input = <-get
 		image = <-get
 		//}
-		if image[5].X == 10 && image[5].Y == 10
-		{
-			fmt.Printf("creating new pixel %d %d C: %d \n", image[5].X, image[5].Y, image[5].C)
-		}
 		var gh = 0
 		var gv = 0
-		fmt.Printf("creating new pixel %d %d C: %d \n", image[5].X, image[5].Y, image[5].C)
-		for i := 1; i < 9; i++ {
+		fmt.Printf("creating new pixel %d %d C: %d \n", image[4].X, image[4].Y, image[4].C)
+		for i := 0; i < 9; i++ {
 			var pixelvalue, _, _, _ = image[i].C.RGBA()
-			gh = gh + int(pixelvalue)*sobelH[i]
-			gv = gv + int(pixelvalue)*sobelV[i]
+			var numberh = int(pixelvalue) * sobelH[i]
+			var numberv = int(pixelvalue) * sobelV[i]
+			gh = gh + numberh
+			gv = gv + numberv
 		}
-
-		var done Pixel // save new Pixel
-		done.X = image[5].X
-		done.Y = image[5].Y
+		done.X = image[4].X
+		done.Y = image[4].Y
 		var newpixel = math.Sqrt(float64((gh * gh) + (gv * gv)))
+		//if uint8(newpixel) > 200 {
 		done.C = color.Gray{uint8(newpixel)}
-		fmt.Printf("made new pixel %d %d C: %d \n", done.X, done.Y, done.C)
+		//} else {
+		//	done.C = color.Gray{uint8(0)}
+		//}
+		fmt.Printf("made new pixel %d %d C: %d old C: %d \n", done.X, done.Y, done.C, image[4].C)
 		set <- done
 	}
 }
@@ -103,6 +103,18 @@ func main() {
 				var pixel Pixel
 				var locationx = currentx + movementx[i] // -1 1 +1
 				var locationy = currenty + movementy[i] // -1 1 +1
+				/*switch i {
+				case 0:
+					locationx = locationx - 1
+					locationy = locationy - 1
+				case 1:
+					locationy = locationy - 1
+				case 2:
+					locationx = locationx + 1
+					locationy = locationy - 1
+				case 3:
+					locationx = locationx - 1
+				}*/
 				if locationx < 0 || locationy < 0 || locationx > w || locationy > h {
 					pixel.C = color.Black // clamp edge of image
 					subimage[i] = pixel
