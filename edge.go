@@ -39,24 +39,22 @@ func sobelWorker(get <-chan [9]Pixel, set chan<- Pixel) {
 		//}
 		var gh = 0
 		var gv = 0
-		fmt.Printf("creating new pixel %d %d C: %d \n", image[4].X, image[4].Y, image[4].C)
+		//fmt.Printf("creating new pixel %d %d C: %d \n", image[4].X, image[4].Y, image[4].C)
 		for i := 0; i < 9; i++ {
-			var pixelvalue, _, _, _ = image[i].C.RGBA()
-			var numberh = int(pixelvalue) * sobelH[i]
-			var numberv = int(pixelvalue) * sobelV[i]
+			var pixelvalue, _, _, _ = image[i].C.RGBA() // get pixel value from image
+			realpixelvalue := uint8(pixelvalue)         // lower value to reduce noise
+			var numberh = int(realpixelvalue) * int(sobelH[i])
+			var numberv = int(realpixelvalue) * int(sobelV[i])
 			gh = gh + numberh
 			gv = gv + numberv
 		}
 		done.X = image[4].X
 		done.Y = image[4].Y
-		var newpixel = math.Sqrt(float64((gh * gh) + (gv * gv)))
-		//if uint8(newpixel) > 200 {
+
+		var newpixel = uint32(math.Ceil(math.Sqrt(float64((gh * gh) + (gv * gv))))) // calculate new pixel value
 		done.C = color.Gray{uint8(newpixel)}
-		//} else {
-		//	done.C = color.Gray{uint8(0)}
-		//}
-		fmt.Printf("made new pixel %d %d C: %d old C: %d \n", done.X, done.Y, done.C, image[4].C)
-		set <- done
+		//fmt.Printf("made new pixel %d %d C: %d old C: %d \n", done.X, done.Y, done.C, image[4].C)
+		set <- done // send new pixel to image
 	}
 }
 
@@ -100,29 +98,17 @@ func main() {
 			//get next part of image
 			var subimage [9]Pixel
 			for i := 0; i < 9; i++ {
-				var pixel Pixel
+				var pixels Pixel
 				var locationx = currentx + movementx[i] // -1 1 +1
 				var locationy = currenty + movementy[i] // -1 1 +1
-				/*switch i {
-				case 0:
-					locationx = locationx - 1
-					locationy = locationy - 1
-				case 1:
-					locationy = locationy - 1
-				case 2:
-					locationx = locationx + 1
-					locationy = locationy - 1
-				case 3:
-					locationx = locationx - 1
-				}*/
 				if locationx < 0 || locationy < 0 || locationx > w || locationy > h {
-					pixel.C = color.Black // clamp edge of image
-					subimage[i] = pixel
+					pixels.C = color.Black // clamp edge of image
+					subimage[i] = pixels
 				} else {
-					pixel.X = locationx
-					pixel.Y = locationy
-					pixel.C = src.At(locationx, locationy)
-					subimage[i] = pixel
+					pixels.X = locationx
+					pixels.Y = locationy
+					pixels.C = src.At(locationx, locationy)
+					subimage[i] = pixels
 				}
 			}
 			//fmt.Printf("sending to worker \n")
@@ -133,7 +119,7 @@ func main() {
 					if sent == false {
 						select {
 						case done := <-updated[i]:
-							fmt.Printf("got pixel %d  %d c: %d from worker %d \n", done.X, done.Y, done.C, i)
+							//fmt.Printf("got pixel %d  %d c: %d from worker %d \n", done.X, done.Y, done.C, i)
 							if done.X < 0 || done.Y < 0 { // ignore
 								inputpixels[i] <- subimage
 								sent = true
