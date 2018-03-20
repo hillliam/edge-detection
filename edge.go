@@ -9,6 +9,7 @@ import ( // for console I/O
 	"image/png"
 	"math"
 	"os"
+	"time"
 )
 
 // image support
@@ -18,9 +19,15 @@ var sobelH = [9]int{-1, 0, 1, -2, 0, 2, -1, 0, 1} // both are applied to the pix
 var sobelV = [9]int{1, 2, 1, 0, 0, 0, -1, -2, -1}
 
 var movementx = [9]int{-1, 0, 1, -1, 0, 1, -1, 0, 1}
+
 var movementy = [9]int{-1, -1, -1, 0, 0, 0, 1, 1, 1}
 
-const threads = 4
+var images = [4]string{"256.png", "start.png", "large.png", "3840.png"}
+
+const threads = 7
+const runs = 3
+
+var startTimer = time.Now()
 
 type Pixel struct { // store pixel data
 	X, Y int         // location
@@ -60,89 +67,108 @@ func sobelWorker(get <-chan [9]Pixel, set chan<- Pixel) {
 
 //-- main process ----------------------------------------------------
 func main() {
-	filename := "start.png"
-	infile, err := os.Open(filename)
-	if err != nil {
-		// replace this with real error handling
-		panic(err.Error())
-	}
-	defer infile.Close()
-
-	// Decode will figure out what type of image is in the file on its own.
-	// We just have to be sure all the image packages we want are imported.
-	src, _, err := image.Decode(infile)
-	if err != nil {
-		// replace this with real error handling
-		panic(err.Error())
-	}
-
-	// Create a new grayscale image
-	bounds := src.Bounds()
-	w, h := bounds.Max.X, bounds.Max.Y
-	edge := image.NewGray(image.Rectangle{image.Point{0, 0}, image.Point{w, h}})
-	fmt.Printf("image is %d by %d \n", w, h)
-	inputpixels := make([]chan [9]Pixel, threads)
-	updated := make([]chan Pixel, threads)
-
-	for i := 0; i < threads; i++ {
-		inputpixels[i] = make(chan [9]Pixel)
-		updated[i] = make(chan Pixel)
-	}
-	for i := 0; i < threads; i++ {
-		go sobelWorker(inputpixels[i], updated[i])
-	}
-
-	for currentx := 0; currentx < w; currentx++ { //handle sending parts of the image
-		for currenty := 0 - threads; currenty < h; currenty++ {
-			//fmt.Printf("starting pixel %d  %d \n", currentx, currenty)
-			//get next part of image
-			var subimage [9]Pixel
-			for i := 0; i < 9; i++ {
-				var pixels Pixel
-				var locationx = currentx + movementx[i] // -1 1 +1
-				var locationy = currenty + movementy[i] // -1 1 +1
-				if locationx < 0 || locationy < 0 || locationx > w || locationy > h {
-					pixels.C = color.Black // clamp edge of image
-					subimage[i] = pixels
-				} else {
-					pixels.X = locationx
-					pixels.Y = locationy
-					pixels.C = src.At(locationx, locationy)
-					subimage[i] = pixels
-				}
+	for b := 0; b < 4; b++ {
+		for a := 0; a < runs; a++ {
+			filename := images[b]
+			infile, err := os.Open(filename)
+			Results, err := os.OpenFile("Results.txt", os.O_APPEND|os.O_CREATE, 0666)
+			if err != nil {
+				// replace this with real error handling
+				panic(err.Error())
 			}
-			//fmt.Printf("sending to worker \n")
-			// send pixels
-			var sent = false
-			for sent != true {
-				for i := 0; i < threads; i++ {
-					if sent == false {
-						select {
-						case done := <-updated[i]:
-							//fmt.Printf("got pixel %d  %d c: %d from worker %d \n", done.X, done.Y, done.C, i)
-							if done.X < 0 || done.Y < 0 { // ignore
-								inputpixels[i] <- subimage
-								sent = true
-							} else {
-								edge.Set(done.X, done.Y, done.C)
-								inputpixels[i] <- subimage
-								sent = true
-								//fmt.Printf("%d \n", done)
+			defer infile.Close()
+			defer Results.Close()
+			// Decode will figure out what type of image is in the file on its own.
+			// We just have to be sure all the image packages we want are imported.
+			src, _, err := image.Decode(infile)
+			if err != nil {
+				// replace this with real error handling
+				panic(err.Error())
+			}
+
+			// Create a new grayscale image
+			bounds := src.Bounds()
+			w, h := bounds.Max.X, bounds.Max.Y
+			edge := image.NewGray(image.Rectangle{image.Point{0, 0}, image.Point{w, h}})
+			fmt.Printf("image is %d by %d \n", w, h)
+			inputpixels := make([]chan [9]Pixel, threads)
+			updated := make([]chan Pixel, threads)
+
+			for i := 0; i < threads; i++ {
+				inputpixels[i] = make(chan [9]Pixel)
+				updated[i] = make(chan Pixel)
+			}
+			for i := 0; i < threads; i++ {
+				go sobelWorker(inputpixels[i], updated[i])
+			}
+
+			startTimer = time.Now() // start of real work
+
+			for currentx := 0; currentx < w; currentx++ { //handle sending parts of the image
+				for currenty := 0 - threads; currenty < h; currenty++ {
+					//fmt.Printf("starting pixel %d  %d \n", currentx, currenty)
+					//get next part of image
+					var subimage [9]Pixel
+					for i := 0; i < 9; i++ {
+						var pixels Pixel
+						var locationx = currentx + movementx[i] // -1 1 +1
+						var locationy = currenty + movementy[i] // -1 1 +1
+						if locationx < 0 || locationy < 0 || locationx > w || locationy > h {
+							pixels.C = color.Black // clamp edge of image
+							subimage[i] = pixels
+						} else {
+							pixels.X = locationx
+							pixels.Y = locationy
+							pixels.C = src.At(locationx, locationy)
+							subimage[i] = pixels
+						}
+					}
+					//fmt.Printf("sending to worker \n")
+					// send pixels
+					var sent = false
+					for sent != true {
+						for i := 0; i < threads; i++ {
+							if sent == false {
+								select {
+								case done := <-updated[i]:
+									//fmt.Printf("got pixel %d  %d c: %d from worker %d \n", done.X, done.Y, done.C, i)
+									if done.X < 0 || done.Y < 0 { // ignore
+										inputpixels[i] <- subimage
+										sent = true
+									} else {
+										edge.Set(done.X, done.Y, done.C)
+										inputpixels[i] <- subimage
+										sent = true
+										//fmt.Printf("%d \n", done)
+									}
+								default:
+								}
 							}
-						default:
 						}
 					}
 				}
 			}
+
+			elapsedTime := time.Since(startTimer)
+			var simple_throughput = ((float64)(w*h*18) / (elapsedTime.Seconds() / 1000.0) / 1000000000.0)
+			var stperline = simple_throughput / 6
+			fmt.Println("elapsed time: ", elapsedTime)
+			fmt.Println("go throughput: ", simple_throughput)
+			fmt.Println("go throughput per line: ", stperline)
+			_, _ = Results.WriteString(fmt.Sprintf("run %d ", (a + 1)))
+			_, _ = Results.WriteString(fmt.Sprintf("\nimage is %d by %d ", w, h))
+			_, _ = Results.WriteString(fmt.Sprintf("\nelapsed time: ", elapsedTime))
+			_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput: %f ", simple_throughput))
+			_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput per line: %f \n\n", stperline))
+			// Encode the grayscale image to the output file
+			outfilename := "done" + images[b]
+			outfile, err := os.Create(outfilename)
+			if err != nil {
+				// replace this with real error handling
+				panic(err.Error())
+			}
+			defer outfile.Close()
+			png.Encode(outfile, edge)
 		}
 	}
-	// Encode the grayscale image to the output file
-	outfilename := "done.png"
-	outfile, err := os.Create(outfilename)
-	if err != nil {
-		// replace this with real error handling
-		panic(err.Error())
-	}
-	defer outfile.Close()
-	png.Encode(outfile, edge)
 }
