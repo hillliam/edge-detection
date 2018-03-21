@@ -150,15 +150,15 @@ func main() {
 			}
 
 			elapsedTime := time.Since(startTimer)
-			var simple_throughput = ((float64)(w*h*18) / (elapsedTime.Seconds() / 1000.0) / 1000000000.0)
-			var stperline = simple_throughput / 6
+			var simpleThroughput = ((float64)(w*h*18) / (elapsedTime.Seconds() / 1000.0) / 1000000000.0)
+			var stperline = simpleThroughput / 6
 			fmt.Println("elapsed time: ", elapsedTime)
-			fmt.Println("go throughput: ", simple_throughput)
+			fmt.Println("go throughput: ", simpleThroughput)
 			fmt.Println("go throughput per line: ", stperline)
 			_, _ = Results.WriteString(fmt.Sprintf("run %d ", (a + 1)))
 			_, _ = Results.WriteString(fmt.Sprintf("\nimage is %d by %d ", w, h))
 			_, _ = Results.WriteString(fmt.Sprintf("\nelapsed time: ", elapsedTime))
-			_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput: %f ", simple_throughput))
+			_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput: %f ", simpleThroughput))
 			_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput per line: %f \n\n", stperline))
 			// Encode the grayscale image to the output file
 			outfilename := "done" + images[b]
