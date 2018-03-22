@@ -110,7 +110,7 @@ func edgeDetection(h int, w int, src image.Image) (edge image.Image) {
 								inputpixels[i] <- subimage
 								sent = true
 							} else {
-								edge.Set(done.X, done.Y, done.C)
+								edge.(*image.Gray).Set(done.X, done.Y, done.C)
 								inputpixels[i] <- subimage
 								sent = true
 								//fmt.Printf("%d \n", done)
