@@ -65,6 +65,65 @@ func sobelWorker(get <-chan [9]Pixel, set chan<- Pixel) {
 	}
 }
 
+func edgeDetection(h int, w int, src image.RGBA) (edge image.Gray) {
+	inputpixels := make([]chan [9]Pixel, threads)
+	updated := make([]chan Pixel, threads)
+
+	for i := 0; i < threads; i++ {
+		inputpixels[i] = make(chan [9]Pixel)
+		updated[i] = make(chan Pixel)
+	}
+	for i := 0; i < threads; i++ {
+		go sobelWorker(inputpixels[i], updated[i])
+	}
+
+	for currentx := 0; currentx < w; currentx++ { //handle sending parts of the image
+		for currenty := 0 - threads; currenty < h; currenty++ {
+			//fmt.Printf("starting pixel %d  %d \n", currentx, currenty)
+			//get next part of image
+			var subimage [9]Pixel
+			for i := 0; i < 9; i++ {
+				var pixels Pixel
+				var locationx = currentx + movementx[i] // -1 1 +1
+				var locationy = currenty + movementy[i] // -1 1 +1
+				if locationx < 0 || locationy < 0 || locationx > w || locationy > h {
+					pixels.C = color.Black // clamp edge of image
+					subimage[i] = pixels
+				} else {
+					pixels.X = locationx
+					pixels.Y = locationy
+					pixels.C = src.At(locationx, locationy)
+					subimage[i] = pixels
+				}
+			}
+			//fmt.Printf("sending to worker \n")
+			// send pixels
+			var sent = false
+			for sent != true {
+				for i := 0; i < threads; i++ {
+					if sent == false {
+						select {
+						case done := <-updated[i]:
+							//fmt.Printf("got pixel %d  %d c: %d from worker %d \n", done.X, done.Y, done.C, i)
+							if done.X < 0 || done.Y < 0 { // ignore
+								inputpixels[i] <- subimage
+								sent = true
+							} else {
+								edge.Set(done.X, done.Y, done.C)
+								inputpixels[i] <- subimage
+								sent = true
+								//fmt.Printf("%d \n", done)
+							}
+						default:
+						}
+					}
+				}
+			}
+		}
+	}
+	return
+}
+
 //-- main process ----------------------------------------------------
 func main() {
 	for b := 0; b < 4; b++ {
@@ -91,63 +150,9 @@ func main() {
 			w, h := bounds.Max.X, bounds.Max.Y
 			edge := image.NewGray(image.Rectangle{image.Point{0, 0}, image.Point{w, h}})
 			fmt.Printf("image is %d by %d \n", w, h)
-			inputpixels := make([]chan [9]Pixel, threads)
-			updated := make([]chan Pixel, threads)
-
-			for i := 0; i < threads; i++ {
-				inputpixels[i] = make(chan [9]Pixel)
-				updated[i] = make(chan Pixel)
-			}
-			for i := 0; i < threads; i++ {
-				go sobelWorker(inputpixels[i], updated[i])
-			}
 
 			startTimer = time.Now() // start of real work
-
-			for currentx := 0; currentx < w; currentx++ { //handle sending parts of the image
-				for currenty := 0 - threads; currenty < h; currenty++ {
-					//fmt.Printf("starting pixel %d  %d \n", currentx, currenty)
-					//get next part of image
-					var subimage [9]Pixel
-					for i := 0; i < 9; i++ {
-						var pixels Pixel
-						var locationx = currentx + movementx[i] // -1 1 +1
-						var locationy = currenty + movementy[i] // -1 1 +1
-						if locationx < 0 || locationy < 0 || locationx > w || locationy > h {
-							pixels.C = color.Black // clamp edge of image
-							subimage[i] = pixels
-						} else {
-							pixels.X = locationx
-							pixels.Y = locationy
-							pixels.C = src.At(locationx, locationy)
-							subimage[i] = pixels
-						}
-					}
-					//fmt.Printf("sending to worker \n")
-					// send pixels
-					var sent = false
-					for sent != true {
-						for i := 0; i < threads; i++ {
-							if sent == false {
-								select {
-								case done := <-updated[i]:
-									//fmt.Printf("got pixel %d  %d c: %d from worker %d \n", done.X, done.Y, done.C, i)
-									if done.X < 0 || done.Y < 0 { // ignore
-										inputpixels[i] <- subimage
-										sent = true
-									} else {
-										edge.Set(done.X, done.Y, done.C)
-										inputpixels[i] <- subimage
-										sent = true
-										//fmt.Printf("%d \n", done)
-									}
-								default:
-								}
-							}
-						}
-					}
-				}
-			}
+			// execute algoritham
 
 			elapsedTime := time.Since(startTimer)
 			var simpleThroughput = ((float64)(w*h*18) / (elapsedTime.Seconds() / 1000.0) / 1000000000.0)
