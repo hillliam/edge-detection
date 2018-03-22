@@ -65,7 +65,8 @@ func sobelWorker(get <-chan [9]Pixel, set chan<- Pixel) {
 	}
 }
 
-func edgeDetection(h int, w int, src image.RGBA) (edge image.Gray) {
+func edgeDetection(h int, w int, src image.Image) (edge image.Image) {
+	edge = image.NewGray(image.Rectangle{image.Point{0, 0}, image.Point{w, h}})
 	inputpixels := make([]chan [9]Pixel, threads)
 	updated := make([]chan Pixel, threads)
 
@@ -148,11 +149,12 @@ func main() {
 			// Create a new grayscale image
 			bounds := src.Bounds()
 			w, h := bounds.Max.X, bounds.Max.Y
-			edge := image.NewGray(image.Rectangle{image.Point{0, 0}, image.Point{w, h}})
 			fmt.Printf("image is %d by %d \n", w, h)
 
 			startTimer = time.Now() // start of real work
 			// execute algoritham
+
+			edge := edgeDetection(w, h, src)
 
 			elapsedTime := time.Since(startTimer)
 			var simpleThroughput = ((float64)(w*h*18) / (elapsedTime.Seconds() / 1000.0) / 1000000000.0)
