@@ -65,7 +65,33 @@ func sobelWorker(get <-chan [9]Pixel, set chan<- Pixel) {
 	}
 }
 
-func edgeDetection(h int, w int, src image.Image) (edge image.Image) {
+func getMesurments(src image.Image) (w, h int) {
+	bounds := src.Bounds()
+	w, h = bounds.Max.X, bounds.Max.Y
+	fmt.Printf("image is %d by %d \n", w, h)
+	return
+}
+
+func getpixels(src image.Image, currentx,currenty,w,h int) (subimage [9]Pixel) {
+	for i := 0; i < 9; i++ {
+		var pixels Pixel
+		var locationx = currentx + movementx[i] // -1 1 +1
+		var locationy = currenty + movementy[i] // -1 1 +1
+		if locationx < 0 || locationy < 0 || locationx > w || locationy > h {
+			pixels.C = color.Black // clamp edge of image
+			subimage[i] = pixels
+		} else {
+			pixels.X = locationx
+			pixels.Y = locationy
+			pixels.C = src.At(locationx, locationy)
+			subimage[i] = pixels
+		}
+	}
+	return
+}
+
+func edgeDetection(src image.Image) (edge image.Image) {
+	w, h := getMesurments(src)
 	edge = image.NewGray(image.Rectangle{image.Point{0, 0}, image.Point{w, h}})
 	inputpixels := make([]chan [9]Pixel, threads)
 	updated := make([]chan Pixel, threads)
@@ -82,21 +108,7 @@ func edgeDetection(h int, w int, src image.Image) (edge image.Image) {
 		for currenty := 0 - threads; currenty < h; currenty++ {
 			//fmt.Printf("starting pixel %d  %d \n", currentx, currenty)
 			//get next part of image
-			var subimage [9]Pixel
-			for i := 0; i < 9; i++ {
-				var pixels Pixel
-				var locationx = currentx + movementx[i] // -1 1 +1
-				var locationy = currenty + movementy[i] // -1 1 +1
-				if locationx < 0 || locationy < 0 || locationx > w || locationy > h {
-					pixels.C = color.Black // clamp edge of image
-					subimage[i] = pixels
-				} else {
-					pixels.X = locationx
-					pixels.Y = locationy
-					pixels.C = src.At(locationx, locationy)
-					subimage[i] = pixels
-				}
-			}
+			var subimage = getpixels(src,currentx, currenty,w,h)
 			//fmt.Printf("sending to worker \n")
 			// send pixels
 			var sent = false
@@ -147,23 +159,21 @@ func main() {
 			}
 
 			// Create a new grayscale image
-			bounds := src.Bounds()
-			w, h := bounds.Max.X, bounds.Max.Y
-			fmt.Printf("image is %d by %d \n", w, h)
 
 			startTimer = time.Now() // start of real work
 			// execute algoritham
 
-			edge := edgeDetection(w, h, src)
+			edge := edgeDetection(src)
 
 			elapsedTime := time.Since(startTimer)
+			var w,h = getMesurments(src)
 			var simpleThroughput = ((float64)(w*h*18) / (elapsedTime.Seconds() / 1000.0) / 1000000000.0)
 			var stperline = simpleThroughput / 6
 			fmt.Println("elapsed time: ", elapsedTime)
 			fmt.Println("go throughput: ", simpleThroughput)
 			fmt.Println("go throughput per line: ", stperline)
 			_, _ = Results.WriteString(fmt.Sprintf("run %d ", (a + 1)))
-			_, _ = Results.WriteString(fmt.Sprintf("\nimage is %d by %d ", w, h))
+			_, _ = Results.WriteString(fmt.Sprintf("\nimage is %d by %d ", w,h))
 			_, _ = Results.WriteString(fmt.Sprintf("\nelapsed time: ", elapsedTime))
 			_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput: %f ", simpleThroughput))
 			_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput per line: %f \n\n", stperline))
