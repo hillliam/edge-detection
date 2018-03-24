@@ -72,7 +72,7 @@ func getMesurments(src image.Image) (w, h int) {
 	return
 }
 
-func getpixels(src image.Image, currentx,currenty,w,h int) (subimage [9]Pixel) {
+func getpixels(src image.Image, currentx, currenty, w, h int) (subimage [9]Pixel) {
 	for i := 0; i < 9; i++ {
 		var pixels Pixel
 		var locationx = currentx + movementx[i] // -1 1 +1
@@ -108,13 +108,13 @@ func edgeDetection(src image.Image) (edge image.Image) {
 		for currenty := 0 - threads; currenty < h; currenty++ {
 			//fmt.Printf("starting pixel %d  %d \n", currentx, currenty)
 			//get next part of image
-			var subimage = getpixels(src,currentx, currenty,w,h)
+			var subimage = getpixels(src, currentx, currenty, w, h)
 			//fmt.Printf("sending to worker \n")
 			// send pixels
 			var sent = false
-			for sent != true {
+			for !sent {
 				for i := 0; i < threads; i++ {
-					if sent == false {
+					if !sent {
 						select {
 						case done := <-updated[i]:
 							//fmt.Printf("got pixel %d  %d c: %d from worker %d \n", done.X, done.Y, done.C, i)
@@ -137,55 +137,55 @@ func edgeDetection(src image.Image) (edge image.Image) {
 	return
 }
 
+func handleerror(err error) {
+	if err != nil {
+		// replace this with real error handling
+		panic(err.Error())
+	}
+}
+
+func edgerun(filename, outfilename string, a, b int) {
+	infile, err := os.Open(filename)
+	handleerror(err)
+	Results, err := os.OpenFile("Results.txt", os.O_APPEND|os.O_CREATE, 0666)
+	handleerror(err)
+	defer infile.Close()
+	defer Results.Close()
+	// Decode will figure out what type of image is in the file on its own.
+	// We just have to be sure all the image packages we want are imported.
+	src, _, err := image.Decode(infile)
+	handleerror(err)
+	// Create a new grayscale image
+
+	startTimer = time.Now() // start of real work
+	// execute algoritham
+
+	edge := edgeDetection(src)
+
+	elapsedTime := time.Since(startTimer)
+	var w, h = getMesurments(src)
+	var simpleThroughput = ((float64)(w*h*18) / (elapsedTime.Seconds() / 1000.0) / 1000000000.0)
+	var stperline = simpleThroughput / 6
+	fmt.Println("elapsed time: ", elapsedTime)
+	fmt.Println("go throughput: ", simpleThroughput)
+	fmt.Println("go throughput per line: ", stperline)
+	_, _ = Results.WriteString(fmt.Sprintf("run %d ", (a + 1)))
+	_, _ = Results.WriteString(fmt.Sprintf("\nimage is %d by %d ", w, h))
+	_, _ = Results.WriteString(fmt.Sprintf("\nelapsed time: ", elapsedTime))
+	_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput: %f ", simpleThroughput))
+	_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput per line: %f \n\n", stperline))
+	// Encode the grayscale image to the output file
+	outfile, err := os.Create(outfilename)
+	handleerror(err)
+	defer outfile.Close()
+	png.Encode(outfile, edge)
+}
+
 //-- main process ----------------------------------------------------
 func main() {
 	for b := 0; b < 4; b++ {
 		for a := 0; a < runs; a++ {
-			filename := images[b]
-			infile, err := os.Open(filename)
-			Results, err := os.OpenFile("Results.txt", os.O_APPEND|os.O_CREATE, 0666)
-			if err != nil {
-				// replace this with real error handling
-				panic(err.Error())
-			}
-			defer infile.Close()
-			defer Results.Close()
-			// Decode will figure out what type of image is in the file on its own.
-			// We just have to be sure all the image packages we want are imported.
-			src, _, err := image.Decode(infile)
-			if err != nil {
-				// replace this with real error handling
-				panic(err.Error())
-			}
-
-			// Create a new grayscale image
-
-			startTimer = time.Now() // start of real work
-			// execute algoritham
-
-			edge := edgeDetection(src)
-
-			elapsedTime := time.Since(startTimer)
-			var w,h = getMesurments(src)
-			var simpleThroughput = ((float64)(w*h*18) / (elapsedTime.Seconds() / 1000.0) / 1000000000.0)
-			var stperline = simpleThroughput / 6
-			fmt.Println("elapsed time: ", elapsedTime)
-			fmt.Println("go throughput: ", simpleThroughput)
-			fmt.Println("go throughput per line: ", stperline)
-			_, _ = Results.WriteString(fmt.Sprintf("run %d ", (a + 1)))
-			_, _ = Results.WriteString(fmt.Sprintf("\nimage is %d by %d ", w,h))
-			_, _ = Results.WriteString(fmt.Sprintf("\nelapsed time: ", elapsedTime))
-			_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput: %f ", simpleThroughput))
-			_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput per line: %f \n\n", stperline))
-			// Encode the grayscale image to the output file
-			outfilename := "done" + images[b]
-			outfile, err := os.Create(outfilename)
-			if err != nil {
-				// replace this with real error handling
-				panic(err.Error())
-			}
-			defer outfile.Close()
-			png.Encode(outfile, edge)
+			edgerun(images[b], "done"+images[b], a, b)
 		}
 	}
 }
