@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func Testmesurments(t *testing.T) {
+func TestMesurments(t *testing.T) {
 	infile, err := os.Open("256.png")
 	handleerror(err)
 	src, _, err := image.Decode(infile)
