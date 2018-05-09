@@ -182,7 +182,7 @@ func edgerun(filename, outfilename string, a, b int) {
 }
 
 //-- main process ----------------------------------------------------
-func main() {
+func maintest() {
 	for b := 0; b < 4; b++ {
 		for a := 0; a < runs; a++ {
 			edgerun(images[b], "done"+images[b], a, b)
