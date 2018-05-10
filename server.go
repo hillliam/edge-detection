@@ -8,6 +8,7 @@ import (
 	"image/png"
 	"log"
 	"net/http"
+	"os"
 )
 
 func servepage(w http.ResponseWriter) {
@@ -38,5 +39,5 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/", handler)
 	http.HandleFunc("*", handler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(os.Getenv("PORT"), nil))
 }
