@@ -39,5 +39,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/", handler)
 	http.HandleFunc("*", handler)
-	log.Fatal(http.ListenAndServe(os.Getenv("PORT"), nil))
+	var port = os.Getenv("$PORT")
+	if port == "" {
+		port = "80"
+	}
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
