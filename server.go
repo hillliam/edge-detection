@@ -41,7 +41,7 @@ func main() {
 	http.HandleFunc("*", handler)
 	var port = os.Getenv("$PORT")
 	if port == "" {
-		port = "80"
+		port = "8080"
 	}
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	log.Output(http.ListenAndServe(":"+port, nil))
 }
