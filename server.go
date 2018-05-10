@@ -37,11 +37,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	log.Print("server started")
 	http.HandleFunc("/", handler)
 	http.HandleFunc("*", handler)
 	var port = os.Getenv("$PORT")
 	if port == "" {
 		port = "8080"
 	}
+	log.Print("server port" + port)
 	log.Print(http.ListenAndServe(":"+port, nil))
 }
