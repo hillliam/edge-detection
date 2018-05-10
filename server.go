@@ -43,5 +43,5 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-	log.Output(http.ListenAndServe(":"+port, nil))
+	log.Print(http.ListenAndServe(":"+port, nil))
 }
