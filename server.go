@@ -40,8 +40,9 @@ func main() {
 	log.Print("server started")
 	http.HandleFunc("/", handler)
 	http.HandleFunc("*", handler)
-	var port = os.Getenv("$PORT")
+	var port = os.Getenv("PORT")
 	if port == "" {
+		log.Print("default port is 8080")
 		port = "8080"
 	}
 	log.Print("server port" + port)
