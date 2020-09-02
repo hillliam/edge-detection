@@ -1,0 +1,49 @@
+name: Go
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: ^1.13
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Get dependencies
+      run: |
+        go get github.com/golang/lint/golint                        # Linter
+        go get honnef.co/go/tools/cmd/megacheck                     # Badass static analyzer/linter
+        go get github.com/fzipp/gocyclo
+
+    - name: Build
+      run: go build -v .
+
+    - name: Test
+      run: go test -v -race ./...
+      
+    - name: static analyzer
+      run: go vet ./...
+      
+    - name: check format
+      run: |
+        GO_FILES=$(find . -iname '*.go' -type f | grep -v /vendor/)
+        test -z $(gofmt -s -l $GO_FILES) 
+      
+    - name: lint
+      run: golint -set_exit_status $(go list ./...)
+      
+    - name: megacheck
+      run: megacheck ./... 
