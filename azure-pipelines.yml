@@ -1,0 +1,66 @@
+# Go
+# Build your Go project.
+# Add steps that test, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/go
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  GOBIN:  '$(GOPATH)/bin' # Go binaries path
+  GOROOT: '/usr/local/go1.11' # Go installation path
+  GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+  modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
+
+steps:
+- script: |
+    mkdir -p '$(GOBIN)'
+    mkdir -p '$(GOPATH)/pkg'
+    mkdir -p '$(modulePath)'
+    shopt -s extglob
+    shopt -s dotglob
+    mv !(gopath) '$(modulePath)'
+    echo '##vso[task.prependpath]$(GOBIN)'
+    echo '##vso[task.prependpath]$(GOROOT)/bin'
+  displayName: 'Set up the Go workspace'
+
+- task: GoTool@0
+  inputs:
+    version: '1.10'
+  
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: 'github.com/golang/lint/golint'
+
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: 'honnef.co/go/tools/cmd/megacheck'
+
+- task: Go@0
+  inputs:
+    command: 'get'
+    arguments: 'github.com/fzipp/gocyclo'
+
+- task: Go@0
+  inputs:
+    command: 'build'
+
+- task: Go@0
+  inputs:
+    command: 'test'
+    arguments: '-v -race ./...'
+
+- task: Go@0
+  inputs:
+    command: 'custom'
+    customCommand: 'vet'
+    arguments: './...'
+
+- script: |
+    golint -set_exit_status $(go list ./...)
+    megacheck ./...
