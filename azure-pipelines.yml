@@ -34,11 +34,6 @@ steps:
   
 - task: Go@0
   inputs:
-    command: 'get'
-    arguments: 'github.com/golang/lint/golint'
-
-- task: Go@0
-  inputs:
     command: 'build'
     arguments: '-v .'
 
@@ -52,9 +47,6 @@ steps:
     command: 'custom'
     customCommand: 'vet'
     arguments: './...'
-
-- script: |
-    golint -set_exit_status $(go list ./...)
 
 - task: PushToHeroku@0
   inputs:
