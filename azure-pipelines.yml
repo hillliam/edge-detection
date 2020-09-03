@@ -14,6 +14,7 @@ variables:
   GOROOT: '/usr/local/go1.11' # Go installation path
   GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
+  AppName: 'image-edge'
 
 steps:
 - script: |
@@ -29,7 +30,7 @@ steps:
 
 - task: GoTool@0
   inputs:
-    version: '1.10'
+    version: '1.15'
   
 - task: Go@0
   inputs:
@@ -38,12 +39,8 @@ steps:
 
 - task: Go@0
   inputs:
-    command: 'get'
-    arguments: 'github.com/fzipp/gocyclo'
-
-- task: Go@0
-  inputs:
     command: 'build'
+    arguments: '-v .'
 
 - task: Go@0
   inputs:
@@ -58,3 +55,9 @@ steps:
 
 - script: |
     golint -set_exit_status $(go list ./...)
+
+- task: PushToHeroku@0
+  inputs:
+    ApiKey: '$(HerokuAPIKey)'
+    AppName: '$(AppName)'
+    PushRoot: '.'
