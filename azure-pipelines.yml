@@ -39,11 +39,6 @@ steps:
 - task: Go@0
   inputs:
     command: 'get'
-    arguments: 'honnef.co/go/tools/cmd/megacheck'
-
-- task: Go@0
-  inputs:
-    command: 'get'
     arguments: 'github.com/fzipp/gocyclo'
 
 - task: Go@0
@@ -63,4 +58,3 @@ steps:
 
 - script: |
     golint -set_exit_status $(go list ./...)
-    megacheck ./...
