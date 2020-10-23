@@ -17,6 +17,11 @@ variables:
   AppName: 'image-edge'
 
 steps:
+- task: GoTool@0
+  inputs:
+    version: '1.11'
+    goPath: '$(GOPATH)'
+    goBin: '$(GOBIN)'
 - script: |
     mkdir -p '$(GOBIN)'
     mkdir -p '$(GOPATH)/pkg'
@@ -27,10 +32,6 @@ steps:
     echo '##vso[task.prependpath]$(GOBIN)'
     echo '##vso[task.prependpath]$(GOROOT)/bin'
   displayName: 'Set up the Go workspace'
-
-- task: GoTool@0
-  inputs:
-    version: '1.15'
   
 - task: Go@0
   inputs:
