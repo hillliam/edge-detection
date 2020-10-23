@@ -33,21 +33,11 @@ steps:
     echo '##vso[task.prependpath]$(GOROOT)/bin'
   displayName: 'Set up the Go workspace'
   
-- task: Go@0
-  inputs:
-    command: 'build'
-    arguments: '-v .'
+- script: go build -v .
 
-- task: Go@0
-  inputs:
-    command: 'test'
-    arguments: '-v -race ./...'
+- script: go test -v -race ./...
 
-- task: Go@0
-  inputs:
-    command: 'custom'
-    customCommand: 'vet'
-    arguments: './...'
+- script: go vet ./...
 
 - task: PushToHeroku@0
   inputs:
