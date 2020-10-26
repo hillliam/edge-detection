@@ -22,6 +22,7 @@ steps:
     version: '1.11'
     goPath: '$(GOPATH)'
     goBin: '$(GOBIN)'
+
 - script: |
     mkdir -p '$(GOBIN)'
     mkdir -p '$(GOPATH)/pkg'
@@ -34,10 +35,13 @@ steps:
   displayName: 'Set up the Go workspace'
   
 - script: go build -v .
+  workingDirectory: $(modulePath)
 
 - script: go test -v -race ./...
+  workingDirectory: $(modulePath)
 
 - script: go vet ./...
+  workingDirectory: $(modulePath)
 
 - task: PushToHeroku@0
   inputs:
