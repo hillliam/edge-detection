@@ -171,7 +171,7 @@ func edgerun(filename, outfilename string, a, b int) {
 	fmt.Println("go throughput per line: ", stperline)
 	_, _ = Results.WriteString(fmt.Sprintf("run %d ", (a + 1)))
 	_, _ = Results.WriteString(fmt.Sprintf("\nimage is %d by %d ", w, h))
-	_, _ = Results.WriteString(fmt.Sprintf("\nelapsed time: ", elapsedTime))
+	_, _ = Results.WriteString(fmt.Sprintf("\nelapsed time: %s", elapsedTime))
 	_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput: %f ", simpleThroughput))
 	_, _ = Results.WriteString(fmt.Sprintf("\ngo throughput per line: %f \n\n", stperline))
 	// Encode the grayscale image to the output file
