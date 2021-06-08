@@ -3,4 +3,4 @@ image:
 
 tasks:
   - init: go build
-    command: go build
+  - init: go test
