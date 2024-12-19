@@ -8,44 +8,49 @@ import (
 
 func TestMesurments(t *testing.T) {
 	infile, err := os.Open("256.png")
-	handleerror(err)
+	if err != nil {
+		t.Fatalf("Failed to open file: %v", err)
+	}
+	defer infile.Close()
+	
 	src, _, err := image.Decode(infile)
-	handleerror(err)
-	var w, h = getMesurments(src)
-	if w != 256 && h != 256 {
-		t.Errorf("mesurments are incorrect, got: %d X %d, want: %d X %d.", w, h, 256, 256)
+	if err != nil {
+		t.Fatalf("Failed to decode image: %v", err)
+	}
+	
+	w, h := getMesurments(src)
+	if w != 256 || h != 256 {
+		t.Errorf("Measurements are incorrect, got: %d x %d, want: %d x %d.", w, h, 256, 256)
 	}
 }
 
-func Test256(t *testing.T) {
-	infile, err := os.Open("256.png")
-	handleerror(err)
-	src, _, err := image.Decode(infile)
-	handleerror(err)
-	edgeDetection(src)
+func TestEdgeDetection(t *testing.T) {
+	tests := []struct {
+		filename string
+	}{
+		{"256.png"},
+		{"start.png"},
+		{"large.png"},
+		{"3840.png"},
+	}
 
-}
-
-func Test512(t *testing.T) {
-	infile, err := os.Open("start.png")
-	handleerror(err)
-	src, _, err := image.Decode(infile)
-	handleerror(err)
-	edgeDetection(src)
-}
-
-func Test1080(t *testing.T) {
-	infile, err := os.Open("large.png")
-	handleerror(err)
-	src, _, err := image.Decode(infile)
-	handleerror(err)
-	edgeDetection(src)
-}
-
-func Test4k(t *testing.T) {
-	infile, err := os.Open("3840.png")
-	handleerror(err)
-	src, _, err := image.Decode(infile)
-	handleerror(err)
-	edgeDetection(src)
+	for _, tt := range tests {
+		t.Run(tt.filename, func(t *testing.T) {
+			infile, err := os.Open(tt.filename)
+			if err != nil {
+				t.Fatalf("Failed to open file: %v", err)
+			}
+			defer infile.Close()
+			
+			src, _, err := image.Decode(infile)
+			if err != nil {
+				t.Fatalf("Failed to decode image: %v", err)
+			}
+			
+			edge := edgeDetection(src)
+			if edge == nil {
+				t.Errorf("Edge detection failed for file: %s", tt.filename)
+			}
+		})
+	}
 }
